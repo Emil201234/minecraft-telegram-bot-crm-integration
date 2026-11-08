@@ -1,6 +1,5 @@
 import asyncio
 import logging
-
 import aiosqlite, hashlib, time, os
 from aiogram import Router, F, Bot
 from aiogram.filters import Command, CommandObject
@@ -23,14 +22,22 @@ router_bot = Router()
 
 load_dotenv()
 DEMO_MODE = os.getenv("DEMO_MODE", "False")
-
-LINKS_DB = os.getenv("LINKS_DB", "links.db")
-AUTH_ME_DB = os.getenv("AUTH_ME_DB", "authme.db")
-USERS_DB = os.getenv("USERS_DB", "bot.db")
-ADMINS_str = os.getenv("ADMINS", "123456789")
-TECH_SUPPORT = os.getenv("TECH_SUPPORT", "https://t.me")
-SUGGESTION = os.getenv("SUGGESTION", "https://t.me")
-ADMINS = [int(ADMIN) for ADMIN in ADMINS_str.split(",")]
+if DEMO_MODE == "True":
+    LINKS_DB = "links.db"
+    AUTH_ME_DB = "authme.db"
+    USERS_DB = os.getenv("USERS_DB", "bot.db")
+    ADMINS_str = os.getenv("ADMINS", "123456789")
+    TECH_SUPPORT = "https://t.me"
+    SUGGESTION = "https://t.me"
+    ADMINS = [int(ADMIN) for ADMIN in ADMINS_str.split(",")]
+else:
+    LINKS_DB = os.getenv("LINKS_DB")
+    AUTH_ME_DB = os.getenv("AUTH_ME_DB")
+    USERS_DB = os.getenv("USERS_DB")
+    ADMINS_str = os.getenv("ADMINS")
+    TECH_SUPPORT = os.getenv("TECH_SUPPORT")
+    SUGGESTION = os.getenv("SUGGESTION")
+    ADMINS = [int(ADMIN) for ADMIN in ADMINS_str.split(",")]
 
 MAX_TRIES = 3
 logger = logging.getLogger(__name__)
@@ -167,6 +174,7 @@ async def clear_database() -> bool:
         return True
 
     except Exception as e:
+        print(f"Ошибка при чистке таблиц БД: {e}")
         logger.error(f"Ошибка при чистке таблиц БД: {e}")
         return False
 
@@ -216,7 +224,7 @@ async def auth_password(callback: CallbackQuery, state: FSMContext):
     left = await blocked_left(callback.from_user.id)
     if DEMO_MODE == "True" and left > 0:
         minutes = (left + 59) // 60
-        await callback.message.answer(f"Слишком много попыток. Подождите {minutes} мин. Пропишите /unblock для пропуска таймера")
+        await callback.message.answer(f"Слишком много попыток. Подождите {minutes} мин. Пропишите /unblock для сброса попыток")
         await callback.answer()
         return
     elif left > 0:
@@ -242,10 +250,10 @@ async def nickname(message: Message, state: FSMContext):
     tries = await state.get_value("tries_nick", 0) + 1
     left = MAX_TRIES - tries
     if DEMO_MODE == "True" and left <= 0:
-        await message.answer("Попытки закончились. Попробуйте позже. Пропишите /unblock для пропуска таймера")
+        await message.answer("Попытки закончились. Попробуйте позже. Пропишите /unblock для сброса попыток")
         await block_user(message.from_user.id, 5 * 60)
         await state.clear()
-    if left <= 0:
+    elif left <= 0:
         await message.answer("Попытки закончились. Попробуйте позже.")
         await block_user(message.from_user.id, 5 * 60)
         await state.clear()
@@ -279,7 +287,7 @@ async def password(message: Message, state: FSMContext, bot: Bot):
     if left <= 0:
         if DEMO_MODE == "True":
             await bot.edit_message_text(
-                text="Попытки закончились. Попробуйте позже. Пропишите /unblock для пропуска таймера",
+                text="Попытки закончились. Попробуйте позже. Пропишите /unblock для сброса попыток",
                 chat_id=message.chat.id,
                 message_id=previous_msg
             )
@@ -317,7 +325,8 @@ async def return_into_shop(callback: CallbackQuery):
 async def unblock(message: Message, command: CommandObject):
     if DEMO_MODE == "True":
         await unblock_user(message.from_user.id)
-        await message.answer("✨ [DEMO] Вы успешно разблокированы! Попробуйте ввести никнейм снова.")
+        await message.answer("Вы успешно разблокированы! Попробуйте ввести никнейм или пароль снова /start.")
+        return
     if message.from_user.id not in ADMINS:
         return
     await unblock_user(message.from_user.id)
@@ -366,15 +375,15 @@ async def about_me(message: Message):
             if DEMO_MODE == "True":
                 connected_account = nick.capitalize()
             # --- ---------- ---
-
-            async with aiosqlite.connect(AUTH_ME_DB) as db:
-                async with db.execute(
-                        "SELECT realname FROM authme WHERE username = ? LIMIT 1",
-                        (nick,)
-                ) as auth_cursor:
-                    auth_row = await auth_cursor.fetchone()
-                    if auth_row:
-                        connected_account = auth_row[0]
+            else:
+                async with aiosqlite.connect(AUTH_ME_DB) as db:
+                    async with db.execute(
+                            "SELECT realname FROM authme WHERE username = ? LIMIT 1",
+                            (nick,)
+                    ) as auth_cursor:
+                        auth_row = await auth_cursor.fetchone()
+                        if auth_row:
+                            connected_account = auth_row[0]
 
         await message.answer(
             f"📋 Информация о пользователе с ID - {user_id}:\n"
