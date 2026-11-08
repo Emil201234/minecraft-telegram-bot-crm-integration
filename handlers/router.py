@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 import aiosqlite, hashlib, time, os
 from aiogram import Router, F, Bot
@@ -9,6 +10,7 @@ from aiogram.types import (
     CallbackQuery
 )
 from handlers import block_user, blocked_left, keyboards, run_command
+from handlers import blocked_users
 from forms.user import Form_user
 from dotenv import load_dotenv
 from datetime import datetime
@@ -31,6 +33,7 @@ SUGGESTION = os.getenv("SUGGESTION", "https://t.me")
 ADMINS = [int(ADMIN) for ADMIN in ADMINS_str.split(",")]
 
 MAX_TRIES = 3
+logger = logging.getLogger(__name__)
 
 # Функции
 
@@ -142,6 +145,30 @@ def format_russian_date(raw_date) -> str:
     }
 
     return f"{dt.day} {months[dt.month]} {dt.year} года в {dt.strftime('%H:%M')}"
+
+async def clear_database() -> bool:
+    try:
+        async with aiosqlite.connect(USERS_DB) as db:
+            await db.execute("PRAGMA foreign_keys = OFF;")
+
+            async with db.execute("SELECT name FROM sqlite_master WHERE type='table';") as cursor:
+                tables = await cursor.fetchall()
+
+            for table in tables:
+                table_name = table[0]
+                if table_name != "sqlite_sequence":
+                    await db.execute(f"DROP TABLE IF EXISTS {table_name}")
+
+            await db.commit()
+
+        await init_db()
+        await blocked_users.init_db()
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Ошибка при чистке таблиц БД: {e}")
+        return False
 
 # Обработчики
 
@@ -295,6 +322,21 @@ async def unblock(message: Message, command: CommandObject):
         return
     await unblock_user(message.from_user.id)
     await message.answer("Вы разблокированы.")
+
+@router_bot.message(Command("reset_db"))
+async def cmd_reset_db(message: Message):
+    if message.from_user.id not in ADMINS:
+        return
+
+    await message.answer("⏳ Начинаю очистку таблиц базы данных...")
+
+    is_success = await clear_database()
+
+    if is_success:
+        await message.answer("✅ База данных успешно очищена! Все таблицы пересозданы с нуля.")
+    else:
+        await message.answer("❌ Произошла ошибка при очистке базы данных. Проверьте логи в Railway.")
+
 
 # ------ Меню ------
 
