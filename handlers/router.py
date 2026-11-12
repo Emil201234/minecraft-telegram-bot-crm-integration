@@ -73,7 +73,7 @@ async def get_nick(user_id: int):
 
 async def demote(nick: str, new_group: str, duration: str) -> bool:
     # --- ДЕМО-РЕЖИМ ---
-    if DEMO_MODE == "True":
+    if DEMO_MODE:
         await asyncio.sleep(0.5)
         return True
     # --- ---------- ---
@@ -98,7 +98,7 @@ def check_sha256(password: str, stored: str) -> bool:
 
 async def check_login(nick: str, password: str) -> bool:
     # --- ДЕМО-РЕЖИМ ---
-    if DEMO_MODE == "True":
+    if DEMO_MODE:
         return nick.lower() in ["steve", "alex", "herobrine", "notch"] and password == "123456"
     # --- ---------- ---
 
@@ -130,7 +130,7 @@ async def redeem_code(code: str):
 
 async def check_nickname(nick: str) -> bool:
     # --- ДЕМО-РЕЖИМ ---
-    if DEMO_MODE == "True":
+    if DEMO_MODE:
         return nick.lower() in ["steve", "alex", "herobrine", "notch"]
     # --- ---------- ---
 
@@ -223,7 +223,7 @@ async def link_cmd(message: Message, command: CommandObject):
 @router_bot.callback_query(F.data == keyboards.btn_auth_password_inline.callback_data)
 async def auth_password(callback: CallbackQuery, state: FSMContext):
     left = await blocked_left(callback.from_user.id)
-    if DEMO_MODE == "True" and left > 0:
+    if DEMO_MODE and left > 0:
         minutes = (left + 59) // 60
         await callback.message.answer(f"Слишком много попыток. Подождите {minutes} мин. Пропишите /unblock для сброса попыток")
         await callback.answer()
@@ -250,7 +250,7 @@ async def nickname(message: Message, state: FSMContext):
 
     tries = await state.get_value("tries_nick", 0) + 1
     left = MAX_TRIES - tries
-    if DEMO_MODE == "True" and left <= 0:
+    if DEMO_MODE and left <= 0:
         await message.answer("Попытки закончились. Попробуйте позже. Пропишите /unblock для сброса попыток")
         await block_user(message.from_user.id, 5 * 60)
         await state.clear()
@@ -286,7 +286,7 @@ async def password(message: Message, state: FSMContext, bot: Bot):
     tries = await state.get_value("tries", 0) + 1
     left = MAX_TRIES - tries
     if left <= 0:
-        if DEMO_MODE == "True":
+        if DEMO_MODE:
             await bot.edit_message_text(
                 text="Попытки закончились. Попробуйте позже. Пропишите /unblock для сброса попыток",
                 chat_id=message.chat.id,
@@ -324,7 +324,7 @@ async def return_into_shop(callback: CallbackQuery):
 
 @router_bot.message(Command("unblock"))
 async def unblock(message: Message, command: CommandObject):
-    if DEMO_MODE == "True":
+    if DEMO_MODE:
         await unblock_user(message.from_user.id)
         await message.answer("Вы успешно разблокированы! Попробуйте ввести никнейм или пароль снова /start.")
         return
@@ -373,7 +373,7 @@ async def about_me(message: Message):
 
         if nick:
             # --- ДЕМО-РЕЖИМ ---
-            if DEMO_MODE == "True":
+            if DEMO_MODE:
                 connected_account = nick.capitalize()
             # --- ---------- ---
             else:
