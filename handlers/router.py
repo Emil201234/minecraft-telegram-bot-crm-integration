@@ -11,6 +11,7 @@ from aiogram.types import (
 from handlers import block_user, blocked_left, keyboards, run_command
 from handlers import blocked_users
 from forms.user import Form_user
+from config import DEMO_MODE
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -21,8 +22,7 @@ router_bot = Router()
 # Переменные
 
 load_dotenv()
-DEMO_MODE = os.getenv("DEMO_MODE", "False")
-if DEMO_MODE == "True":
+if DEMO_MODE:
     LINKS_DB = "links.db"
     AUTH_ME_DB = "authme.db"
     USERS_DB = os.getenv("USERS_DB", "bot.db")
