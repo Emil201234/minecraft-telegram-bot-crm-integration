@@ -26,18 +26,22 @@ if DEMO_MODE:
     LINKS_DB = "links.db"
     AUTH_ME_DB = "authme.db"
     USERS_DB = os.getenv("USERS_DB", "bot.db")
-    ADMINS_str = os.getenv("ADMINS", "123456789")
+    ADMINS_env = os.getenv("ADMINS", "123456789")
     TECH_SUPPORT = "https://t.me"
     SUGGESTION = "https://t.me"
-    ADMINS = [int(ADMIN) for ADMIN in ADMINS_str.split(",")]
 else:
     LINKS_DB = os.getenv("LINKS_DB")
     AUTH_ME_DB = os.getenv("AUTH_ME_DB")
     USERS_DB = os.getenv("USERS_DB")
-    ADMINS_str = os.getenv("ADMINS")
+    ADMINS_env = os.getenv("ADMINS")
     TECH_SUPPORT = os.getenv("TECH_SUPPORT")
     SUGGESTION = os.getenv("SUGGESTION")
-    ADMINS = [int(ADMIN) for ADMIN in ADMINS_str.split(",")]
+
+ADMINS = []
+for admin in (ADMINS_env or "").split(","):
+    admin = admin.strip()
+    if admin.isdigit():
+        ADMINS.append(admin)
 
 MAX_TRIES = 3
 logger = logging.getLogger(__name__)
