@@ -3,17 +3,26 @@ from dotenv import load_dotenv
 from handlers.router import router_bot, DEMO_MODE
 from aiogram.types import BotCommand
 from handlers import blocked_users, router
-import asyncio, os
+import asyncio, os, logging, sys
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout) # Вывод в консоль (и в логи Railway)
+    ]
+)
+
+logger = logging.getLogger(__name__)
 
 dp = Dispatcher()
 dp.include_router(router_bot)
 
 async def set_commands(bot: Bot):
-    if DEMO_MODE == "True":
+    if DEMO_MODE:
         await bot.set_my_commands([
             BotCommand(command="start", description="Запуск бота"),
             BotCommand(command="link", description="Привязать аккаунт"),
@@ -26,10 +35,10 @@ async def set_commands(bot: Bot):
         ])
 
 async def main():
-    if DEMO_MODE == "True":
-        print("DEMO-MODE IS ACTIVE")
+    if DEMO_MODE:
+        logger.info("DEMO-MODE IS ACTIVE")
     if not TOKEN:
-        print("not bot_token")
+        logger.critical("BOT_TOKEN не найден! Проверьте файл .env")
         return
     else:
         bot = Bot(token=TOKEN)

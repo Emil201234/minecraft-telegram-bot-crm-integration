@@ -1,6 +1,4 @@
-import asyncio
-import logging
-import aiosqlite, hashlib, time, os
+import aiosqlite, hashlib, time, os, logging, asyncio
 from aiogram import Router, F, Bot
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
@@ -178,7 +176,6 @@ async def clear_database() -> bool:
         return True
 
     except Exception as e:
-        print(f"Ошибка при чистке таблиц БД: {e}")
         logger.error(f"Ошибка при чистке таблиц БД: {e}")
         return False
 
